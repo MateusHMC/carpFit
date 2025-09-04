@@ -1,15 +1,29 @@
-const usuarioRepository = require("../repositories/usuarioRepository");
-const avaliacaoRepository = require("../repositories/avaliacaoRepository");
+const db = require("../../../config/db")
+
+const usuarioRepository = require("../repository/usuarioRepository");
+const avaliacaoRepository = require("../repository/avaliacaoRepository");
+
+
+function calcularIdade(dataNascimento) {
+  const hoje = new Date();
+  const nascimento = new Date(dataNascimento);
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const mes = hoje.getMonth() - nascimento.getMonth();
  
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+ 
+  return idade;
+}
 function calcularTMBHomem(peso, altura, idade) {
   return 10 * peso + 6.25 * altura - 5 * idade + 5;
 }
- 
+
 function calcularTMBMulher(peso, altura, idade) {
   return 10 * peso + 6.25 * altura - 5 * idade - 161;
 }
- 
- 
+
 function getFatorAtividade(nivel) {
   const fatores = {
     "Sedentária": 1.2,
@@ -22,7 +36,7 @@ function getFatorAtividade(nivel) {
   if (!fator) throw new Error("Nível de atividade inválido");
   return fator;
 }
- 
+
 function calcularCalorias(gastoTotal, objetivo) {
   const ajustes = {
     "ganhar": gastoTotal + 500,
@@ -33,7 +47,8 @@ function calcularCalorias(gastoTotal, objetivo) {
   if (calorias === undefined) throw new Error("Objetivo inválido");
   return calorias;
 }
- 
+
+
 class UsuarioController {
   async calcular(req, res) {
     let usuario;
@@ -44,7 +59,7 @@ class UsuarioController {
     } catch (err) {
       return res.status(404).json({ erro: err.message });
     }
- 
+
     let avaliacao;
     try {
       avaliacao = await avaliacaoRepository.findByUserId(usuario.id);
@@ -52,8 +67,16 @@ class UsuarioController {
     } catch (err) {
       return res.status(404).json({ erro: err.message });
     }
- 
- 
+
+    
+    let idade;
+    try {
+      idade = calcularIdade(usuario.nascimento);
+    } catch (err) {
+      return res.status(500).json({ erro: "Erro ao calcular idade: " + err.message });
+    }
+
+
     let tmb;
     try {
       if (usuario.sexo === "M") {
@@ -66,29 +89,31 @@ class UsuarioController {
     } catch (err) {
       return res.status(500).json({ erro: "Erro ao calcular TMB: " + err.message });
     }
- 
+
+
     let fatorAtividade;
     try {
       fatorAtividade = getFatorAtividade(avaliacao.nivel_atividade);
     } catch (err) {
       return res.status(400).json({ erro: err.message });
     }
- 
+
+    
     let gastoTotal;
     try {
       gastoTotal = tmb * fatorAtividade;
     } catch (err) {
       return res.status(500).json({ erro: "Erro ao calcular Gasto Energético Total: " + err.message });
     }
- 
- 
+
+   
     let calorias;
     try {
       calorias = calcularCalorias(gastoTotal, avaliacao.objetivo);
     } catch (err) {
       return res.status(400).json({ erro: err.message });
     }
- 
+
     try {
       res.status(200).json({
         usuario: usuario.nome,
@@ -107,7 +132,5 @@ class UsuarioController {
     }
   }
 }
- 
+
 module.exports = new UsuarioController();
- 
- 
