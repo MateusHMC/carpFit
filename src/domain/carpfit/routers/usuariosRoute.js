@@ -6,4 +6,8 @@ const usuariosController = require("../controllers/usuariosController");
 
 router.get("/:id",usuariosController.calcular)
 
+
 module.exports=router
+=======
+module.exports=router
+
