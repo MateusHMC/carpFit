@@ -1,21 +1,18 @@
-const db = require("../../../config/db")
-
-const usuarioRepository = require("../repository/usuarioRepository");
+const usuarioRepository = require("../repository/usuariosRepository");
 const avaliacaoRepository = require("../repository/avaliacaoRepository");
-
 
 function calcularIdade(dataNascimento) {
   const hoje = new Date();
   const nascimento = new Date(dataNascimento);
   let idade = hoje.getFullYear() - nascimento.getFullYear();
   const mes = hoje.getMonth() - nascimento.getMonth();
- 
+
   if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
     idade--;
   }
- 
   return idade;
 }
+
 function calcularTMBHomem(peso, altura, idade) {
   return 10 * peso + 6.25 * altura - 5 * idade + 5;
 }
@@ -30,105 +27,107 @@ function getFatorAtividade(nivel) {
     "Levemente ativa": 1.375,
     "Moderadamente ativa": 1.55,
     "Muito ativa": 1.725,
-    "Extremamente ativa": 1.9
+    "Extremamente ativa": 1.9,
   };
-  const fator = fatores[nivel];
-  if (!fator) throw new Error("Nível de atividade inválido");
-  return fator;
+  return fatores[nivel] || null;
 }
 
 function calcularCalorias(gastoTotal, objetivo) {
-  const ajustes = {
-    "ganhar": gastoTotal + 500,
-    "perder": gastoTotal - 500,
-    "manter": gastoTotal
-  };
-  const calorias = ajustes[objetivo];
-  if (calorias === undefined) throw new Error("Objetivo inválido");
-  return calorias;
+  if (objetivo === "ganhar") {
+    return gastoTotal + 500;
+  } else if (objetivo === "perder") {
+    return gastoTotal - 500;
+  } else if (objetivo === "manter") {
+    return gastoTotal;
+  } else {
+    return null;
+  }
 }
 
-
 class UsuarioController {
+  async listar(req, res) {
+    try {
+      const usuarios = await usuarioRepository.findAll();
+      res.json(usuarios);
+    } catch (err) {
+      res.status(500).json({ erro: "Erro ao listar usuários" });
+    }
+  }
+
+  async buscar(req, res) {
+    try {
+      const usuario = await usuarioRepository.findById(req.params.id);
+      if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado" });
+      res.json(usuario);
+    } catch (err) {
+      res.status(500).json({ erro: "Erro ao buscar usuário" });
+    }
+  }
+
+  async criar(req, res) {
+    try {
+      const usuario = await usuarioRepository.create(req.body);
+      res.status(201).json(usuario);
+    } catch (err) {
+      res.status(500).json({ erro: "Erro ao criar usuário" });
+    }
+  }
+
+  async deletar(req, res) {
+    try {
+      const resultado = await usuarioRepository.delete(req.params.id);
+      res.json(resultado);
+    } catch (err) {
+      res.status(500).json({ erro: "Erro ao deletar usuário" });
+    }
+  }
+
   async calcular(req, res) {
-    let usuario;
     try {
       const userId = parseInt(req.params.id);
-      usuario = await usuarioRepository.findById(userId);
-      if (!usuario) throw new Error("Usuário não encontrado");
-    } catch (err) {
-      return res.status(404).json({ erro: err.message });
-    }
 
-    let avaliacao;
-    try {
-      avaliacao = await avaliacaoRepository.findByUserId(usuario.id);
-      if (!avaliacao) throw new Error("Avaliação não encontrada");
-    } catch (err) {
-      return res.status(404).json({ erro: err.message });
-    }
+      const usuario = await usuarioRepository.findById(userId);
+      if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado" });
 
-    
-    let idade;
-    try {
-      idade = calcularIdade(usuario.nascimento);
-    } catch (err) {
-      return res.status(500).json({ erro: "Erro ao calcular idade: " + err.message });
-    }
+      const avaliacao = await avaliacaoRepository.findByUserId(usuario.id);
+      if (!avaliacao) return res.status(404).json({ erro: "Avaliação não encontrada" });
 
+      const idade = calcularIdade(usuario.nascimento);
 
-    let tmb;
-    try {
+      const altura = usuario.altura * 100;
+      const peso = usuario.peso;
+
+      let tmb;
       if (usuario.sexo === "M") {
-        tmb = calcularTMBHomem(usuario.peso, usuario.altura, idade);
+        tmb = calcularTMBHomem(peso, altura, idade);
       } else if (usuario.sexo === "F") {
-        tmb = calcularTMBMulher(usuario.peso, usuario.altura, idade);
+        tmb = calcularTMBMulher(peso, altura, idade);
       } else {
-        throw new Error("Sexo inválido! Use 'M' ou 'F'.");
+        return res.status(400).json({ erro: "Sexo inválido! Use 'M' ou 'F'." });
       }
-    } catch (err) {
-      return res.status(500).json({ erro: "Erro ao calcular TMB: " + err.message });
-    }
 
+      const fatorAtividade = getFatorAtividade(avaliacao.nivel_atividade);
+      if (!fatorAtividade) return res.status(400).json({ erro: "Nível de atividade inválido" });
 
-    let fatorAtividade;
-    try {
-      fatorAtividade = getFatorAtividade(avaliacao.nivel_atividade);
-    } catch (err) {
-      return res.status(400).json({ erro: err.message });
-    }
+      const gastoTotal = tmb * fatorAtividade;
 
-    
-    let gastoTotal;
-    try {
-      gastoTotal = tmb * fatorAtividade;
-    } catch (err) {
-      return res.status(500).json({ erro: "Erro ao calcular Gasto Energético Total: " + err.message });
-    }
+      const calorias = calcularCalorias(gastoTotal, avaliacao.objetivo);
+      if (!calorias) return res.status(400).json({ erro: "Objetivo inválido" });
 
-   
-    let calorias;
-    try {
-      calorias = calcularCalorias(gastoTotal, avaliacao.objetivo);
-    } catch (err) {
-      return res.status(400).json({ erro: err.message });
-    }
-
-    try {
-      res.status(200).json({
+      res.json({
         usuario: usuario.nome,
         idade,
-        peso: usuario.peso,
+        peso,
         altura: usuario.altura,
         sexo: usuario.sexo,
         nivel_atividade: avaliacao.nivel_atividade,
         objetivo: avaliacao.objetivo,
         tmb: Math.round(tmb),
         gastoTotal: Math.round(gastoTotal),
-        calorias: Math.round(calorias)
+        calorias: Math.round(calorias),
       });
     } catch (err) {
-      res.status(500).json({ erro: "Erro ao retornar dados: " + err.message });
+      res.status(500).json({ erro: "Erro ao calcular dados: " + err.message });
     }
   }
 }

@@ -11,7 +11,7 @@ const buscar = async(req, res) =>{
         const resultados = await alimentosServices.buscarAlimento(nome)
 
         if (!resultados){
-            return res.status(404).json({ mensagem: "Alimento nõ encontrado" })
+            return res.status(404).json({ mensagem: "Alimento não encontrado" })
         }
 
         res.status(200).json(resultados)
