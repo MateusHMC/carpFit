@@ -7,8 +7,6 @@ router.get("/", usuarioController.listar);
 router.get("/:id", usuarioController.buscar);
 router.post("/", usuarioController.criar);
 router.delete("/:id", usuarioController.deletar);
-
-// 📊 rota para cálculo
 router.get("/:id/calculo", usuarioController.calcular);
 
 module.exports = router;

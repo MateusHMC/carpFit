@@ -1,7 +1,6 @@
 const usuarioRepository = require("../repository/usuariosRepository");
 const avaliacaoRepository = require("../repository/avaliacaoRepository");
 
-// ---------------- Funções auxiliares ----------------
 function calcularIdade(dataNascimento) {
   const hoje = new Date();
   const nascimento = new Date(dataNascimento);
@@ -45,9 +44,7 @@ function calcularCalorias(gastoTotal, objetivo) {
   }
 }
 
-// ---------------- Controller ----------------
 class UsuarioController {
-  // Listar todos usuários
   async listar(req, res) {
     try {
       const usuarios = await usuarioRepository.findAll();
@@ -57,7 +54,6 @@ class UsuarioController {
     }
   }
 
-  // Buscar usuário por ID
   async buscar(req, res) {
     try {
       const usuario = await usuarioRepository.findById(req.params.id);
@@ -68,7 +64,6 @@ class UsuarioController {
     }
   }
 
-  // Criar usuário
   async criar(req, res) {
     try {
       const usuario = await usuarioRepository.create(req.body);
@@ -78,7 +73,6 @@ class UsuarioController {
     }
   }
 
-  // Deletar usuário
   async deletar(req, res) {
     try {
       const resultado = await usuarioRepository.delete(req.params.id);
@@ -88,27 +82,21 @@ class UsuarioController {
     }
   }
 
-  // Calcular dados de saúde
   async calcular(req, res) {
     try {
       const userId = parseInt(req.params.id);
 
-      // Buscar usuário
       const usuario = await usuarioRepository.findById(userId);
       if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado" });
 
-      // Buscar avaliação
       const avaliacao = await avaliacaoRepository.findByUserId(usuario.id);
       if (!avaliacao) return res.status(404).json({ erro: "Avaliação não encontrada" });
 
-      // Calcular idade
       const idade = calcularIdade(usuario.nascimento);
 
-      // Converter altura (de metros para cm, se necessário)
       const altura = usuario.altura * 100;
       const peso = usuario.peso;
 
-      // Calcular TMB
       let tmb;
       if (usuario.sexo === "M") {
         tmb = calcularTMBHomem(peso, altura, idade);
@@ -118,17 +106,14 @@ class UsuarioController {
         return res.status(400).json({ erro: "Sexo inválido! Use 'M' ou 'F'." });
       }
 
-      // Calcular gasto energético total
       const fatorAtividade = getFatorAtividade(avaliacao.nivel_atividade);
       if (!fatorAtividade) return res.status(400).json({ erro: "Nível de atividade inválido" });
 
       const gastoTotal = tmb * fatorAtividade;
 
-      // Ajustar calorias pelo objetivo
       const calorias = calcularCalorias(gastoTotal, avaliacao.objetivo);
       if (!calorias) return res.status(400).json({ erro: "Objetivo inválido" });
 
-      // Resposta final
       res.json({
         usuario: usuario.nome,
         idade,
