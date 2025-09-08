@@ -3,7 +3,7 @@ require("dotenv").config();
 
 const usuarioRoutes = require("../carpFit/domain/carpfit/routers/usuariosRoute");
 const avaliacaoRoutes = require("../carpFit/domain/carpfit/routers/avaliacaoRoute");
-const alimentosRoutes = require("../carpFit/domain/alimentos/routes/alimentosRoutes")
+const alimentosRoutes = require("./src/domain/alimentos/routes/alimentosRoutes")
 
 const app = express();
 app.use(express.json());
