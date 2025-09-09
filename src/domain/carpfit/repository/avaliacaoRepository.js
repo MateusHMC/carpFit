@@ -9,10 +9,14 @@ class AvaliacaoRepository {
         avaliacao.IdUsuario,
         avaliacao.nivel_atividade,
         avaliacao.objetivo,
+        avaliacao.peso,
+        avaliacao.data_avaliacao
         usuario.nascimento
       FROM avaliacao
       INNER JOIN usuario ON usuario.id = avaliacao.IdUsuario
-      WHERE avaliacao.IdUsuario = ?;
+      WHERE avaliacao.IdUsuario = ?
+      ORDER BY avaliacao.data_avaliacao DESC
+      limit 1;
       `,
       [userId]
     );
@@ -20,12 +24,12 @@ class AvaliacaoRepository {
   }
 
   async create(data) {
-    const { usuario_id, nivel_atividade, objetivo } = data;
+    const { usuario_id, nivel_atividade, objetivo, peso } = data;
     const [result] = await db.query(
-      "INSERT INTO avaliacao (usuario_id, nivel_atividade, objetivo) VALUES (?, ?, ?)",
+      "INSERT INTO avaliacao (usuario_id, nivel_atividade, objetivo, peso) VALUES (?, ?, ?,?)",
       [usuario_id, nivel_atividade, objetivo]
     );
-    return { id: result.insertId, usuario_id, nivel_atividade, objetivo };
+    return { id: result.insertId, usuario_id, nivel_atividade, objetivo, peso };
   }
 
   async delete(id) {

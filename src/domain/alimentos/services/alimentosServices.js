@@ -11,7 +11,7 @@ class AlimentosService {
     if (!data.products || !data.products.length) return null;
 
     return data.products.slice(0, 5).map((p) => ({
-      nome: p.product_name_pt,
+      nome: p.product_name_pt || p.product_name || "Sem nome",
       calorias: p.nutriments?.["energy-kcal_100g"] ?? null,
       proteina: p.nutriments?.["proteins_100g"] ?? null,
       carboidratos: p.nutriments?.["carbohydrates_100g"] ?? null
