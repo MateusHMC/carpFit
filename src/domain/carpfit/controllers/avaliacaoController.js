@@ -13,23 +13,8 @@ class AvaliacaoController {
 
   async criar(req, res) {
     try {
-      const {usuario_id, nivel_atividade, objetivo, peso} = req.body;
-
-      if(!usuario_id || !nivel_atividade || !objetivo || peso) {
-        return res.status(400).json({ erro:"Campos obrugatórios faltando"})
-      }
-
-      const data_avaliacao = new Date()
-
-      const avaliacao = await avaliacaoRepository.create({
-        usuario_id,
-        nivel_atividade,
-        objetivo,
-        peso,
-        data_avaliacao
-      })
-
-      res.status(201).json(avaliacao)
+      const avaliacao = await avaliacaoRepository.create(req.body);
+      res.status(201).json(avaliacao);
     } catch (err) {
       res.status(500).json({ erro: "Erro ao criar avaliação" });
     }
